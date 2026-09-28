@@ -172,23 +172,93 @@ const iconoPapelera = '<svg viewBox="0 0 24 24" width="16" height="16" fill="non
 
 // Dibuja la lista "ARCHIVO" del sidebar a partir de "categorias", y le
 // engancha un clic a cada una para abrirla. Se llama una sola vez al arrancar.
+// Cada categoría es una carpeta: una pestaña ("CODE_01 // películas") y un
+// cuerpo con el ícono y el nombre en vertical. Con el archivador cerrado se
+// ve la carpeta entera; con una abierta, style.css deja solo la pestaña.
 function construirSidebar() {
-  listaCategorias.innerHTML = categorias.map(function (c) {
-    return '<li class="cat-item" data-cat="' + c.id + '">'
-      + '<span class="cat-icono">' + iconosCategoria[c.id] + '</span>' + titulos[c.id] + '</li>';
+  listaCategorias.innerHTML = categorias.map(function (c, i) {
+    const numero = String(i + 1).padStart(2, "0");
+    return '<li class="cat-item" data-cat="' + c.id + '" tabindex="0" style="--i:' + i + '">'
+      + '<span class="cat-pestana">CARPETA_' + numero + ' // ' + c.nombre.toLowerCase() + '</span>'
+      + '<span class="cat-cuerpo">'
+      +   '<span class="cat-icono">' + iconosCategoria[c.id] + '</span>'
+      +   '<span class="cat-nombre">' + c.nombre + '</span>'
+      +   '<span class="cat-meta">FILE_' + numero + '<br>ARCHIVO</span>'
+      + '</span></li>';
   }).join("");
 
   listaCategorias.querySelectorAll(".cat-item").forEach(function (li) {
     li.addEventListener("click", function () { abrirCategoria(li.dataset.cat); });
+    li.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirCategoria(li.dataset.cat); }
+    });
   });
+  document.getElementById("btn-cerrar-carpeta").addEventListener("click", cerrarCarpeta);
+  document.getElementById("btn-corazon").addEventListener("click", abrirAvisoSecreto);
 }
 
-// Marca en negrita (clase "activa") la categoría abierta dentro del sidebar,
-// y se la quita a todas las demás.
+// Marca (clase "activa") la carpeta abierta y se la quita a las demás. Además
+// avisa a la ventana si hay alguna carpeta abierta (clase "carpeta-abierta"),
+// que es lo que cambia el archivador de "carpetas paradas" a "pestañas".
 function marcarCategoriaActiva() {
+  // El <body> también sabe qué carpeta está abierta: style.css usa
+  // body[data-cat] para pintar el color de acento de esa categoría.
+  if (categoriaActual) document.body.dataset.cat = categoriaActual;
+  else delete document.body.dataset.cat;
+  document.getElementById("ventana").classList.toggle("carpeta-abierta", !!categoriaActual);
   listaCategorias.querySelectorAll(".cat-item").forEach(function (li) {
     li.classList.toggle("activa", li.dataset.cat === categoriaActual);
   });
+}
+
+// Vuelve al archivador con todas las carpetas cerradas. Con la transición,
+// el contenido se "encoge" de vuelta dentro de la carpeta de donde salió.
+function cerrarCarpeta() {
+  const liOrigen = liDeCategoria(categoriaActual);
+  conTransicion(function () {
+    categoriaActual = null;
+    fichaActual = null;
+    portadaEnModoMover = null;
+    marcarCategoriaActiva();
+    if (liOrigen) liOrigen.classList.add("origen");   // destino del "encogerse"
+  }, function () {
+    if (liOrigen) liOrigen.classList.remove("origen");
+  });
+}
+
+// El <li> de una categoría dentro del archivador (o null).
+function liDeCategoria(cat) {
+  return cat ? listaCategorias.querySelector('.cat-item[data-cat="' + cat + '"]') : null;
+}
+
+// ===== TRANSICIÓN ENTRE ARCHIVADOR Y CARPETA ABIERTA =====
+// Usa la View Transitions API del navegador: le paso una función que hace el
+// cambio de pantalla, el navegador saca una "foto" de antes y de después y
+// anima cada elemento con view-transition-name de un lugar/tamaño al otro
+// (los nombres y tiempos están en style.css, sección "TRANSICIÓN").
+// Si el navegador no la soporta (o la persona pidió menos movimiento), el
+// cambio se hace directo y el contenido usa la animación CSS de respaldo.
+// "alTerminar" (opcional) se llama cuando la animación terminó.
+function conTransicion(cambio, alTerminar) {
+  const sinMovimiento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!document.startViewTransition || sinMovimiento) {
+    cambio();
+    animarDespliegue();
+    if (alTerminar) alTerminar();
+    return;
+  }
+  const transicion = document.startViewTransition(cambio);
+  if (alTerminar) transicion.finished.finally(alTerminar);
+}
+
+// Animación de respaldo (sin View Transitions): reinicia la clase
+// "desplegando" del contenido (quitarla, forzar un reflow leyendo
+// offsetWidth, y volver a ponerla).
+function animarDespliegue() {
+  const contenido = document.getElementById("contenido");
+  contenido.classList.remove("desplegando");
+  void contenido.offsetWidth;
+  contenido.classList.add("desplegando");
 }
 
 // ===== ESTRELLAS =====
@@ -272,13 +342,26 @@ async function eliminarGenero(nombre) {
 // ===== ABRIR CATEGORÍA Y GALERÍA =====
 // Se llama al hacer clic en una categoría del sidebar.
 async function abrirCategoria(cat) {
-  categoriaActual = cat;
-  marcarCategoriaActiva();
+  if (cat === categoriaActual) return;   // ya está desplegada
+  // Si venía del archivador cerrado, la carpeta clickeada es la que "crece"
+  // hasta ser el contenido (clase "origen" -> view-transition-name en CSS).
+  const liOrigen = categoriaActual ? null : liDeCategoria(cat);
+  if (liOrigen) liOrigen.classList.add("origen");
+  conTransicion(function () {
+    if (liOrigen) liOrigen.classList.remove("origen");
+    categoriaActual = cat;
+    marcarCategoriaActiva();
+    // Dejo el contenido listo con el título nuevo para que la "foto" de
+    // después de la transición no muestre la carpeta anterior.
+    tituloCategoria.textContent = titulos[cat];
+    contadorEntradas.textContent = "";
+    galeria.innerHTML = '<p class="vacio">Cargando...</p>';
+  });
   // Los géneros son independientes por categoría (Libros no ve las
   // etiquetas de Películas, ni al revés) - por eso hay que volver a
   // pedirlos cada vez que cambio de categoría, no solo una vez al arrancar.
   await cargarGeneros();
-  mostrarGaleria();
+  if (categoriaActual === cat) mostrarGaleria();   // por si se cerró mientras cargaba
 }
 
 // "Traductor" entre lo que devuelve Postgres y lo que espera mi HTML:
@@ -975,16 +1058,70 @@ function confirmarPersonalizado(mensaje) {
   });
 }
 
+// ===== AVISO SECRETO (botoncito de corazón) =====
+// Una ventanita de alerta estilo computador viejo: primero la "advertencia"
+// y, al apretar "Ver más...", aparece el mensaje de verdad.
+function abrirAvisoSecreto() {
+  if (document.querySelector(".aviso-overlay")) return;   // ya está abierto
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay aviso-overlay";
+  overlay.innerHTML =
+    '<div class="aviso-ventana" role="alertdialog" aria-labelledby="aviso-titulo">'
+    +   '<div class="aviso-barra">'
+    +     '<span id="aviso-titulo">ADVERTENCIA.EXE</span>'
+    +     '<button class="aviso-x" id="aviso-x" aria-label="Cerrar">✕</button>'
+    +   '</div>'
+    +   '<div class="aviso-cuerpo" id="aviso-cuerpo">'
+    +     '<div class="aviso-fila">'
+    +       '<span class="aviso-icono">!</span>'
+    +       '<div>'
+    +         '<p class="aviso-grande">¡¡Advertencia!!</p>'
+    +         '<p class="aviso-texto">Se encontró un archivo oculto en el sistema:<br><b>corazon.txt</b></p>'
+    +       '</div>'
+    +     '</div>'
+    +     '<div class="aviso-acciones">'
+    +       '<button class="btn-retro" id="aviso-cancelar">Cancelar</button>'
+    +       '<button class="btn-retro aviso-principal" id="aviso-ver-mas">Ver más...</button>'
+    +     '</div>'
+    +   '</div>'
+    + '</div>';
+  document.body.appendChild(overlay);
+
+  function cerrar() {
+    overlay.remove();
+    document.removeEventListener("keydown", conEscape);
+  }
+  function conEscape(e) { if (e.key === "Escape") cerrar(); }
+  document.addEventListener("keydown", conEscape);
+  overlay.addEventListener("click", function (e) { if (e.target === overlay) cerrar(); });
+  overlay.querySelector("#aviso-x").addEventListener("click", cerrar);
+  overlay.querySelector("#aviso-cancelar").addEventListener("click", cerrar);
+
+  overlay.querySelector("#aviso-ver-mas").addEventListener("click", function () {
+    overlay.querySelector("#aviso-titulo").textContent = "CORAZON.TXT";
+    overlay.querySelector("#aviso-cuerpo").innerHTML =
+      '<div class="aviso-mensaje">'
+      +   '<span class="aviso-corazon" aria-hidden="true">♥</span>'
+      +   '<p class="aviso-dedicatoria">Te amo con todo mi corazón José&nbsp;Tomás, este es un pequeño regalo de mí para ti. Espero que puedas hacer uso de esta página para registrar todo lo que disfrutes y ames!! Y así te entregue al menos un poco de la felicidad que me entregas tú a mí</p>'
+      + '</div>'
+      + '<div class="aviso-acciones">'
+      +   '<button class="btn-retro aviso-principal" id="aviso-cerrar">Cerrar ♥</button>'
+      + '</div>';
+    overlay.querySelector("#aviso-cerrar").addEventListener("click", cerrar);
+    overlay.querySelector("#aviso-cerrar").focus();
+  });
+  overlay.querySelector("#aviso-ver-mas").focus();
+}
+
 // ===== ARRANQUE =====
 // Tiene que ser async porque cargarGeneros() usa fetch/await: necesito
 // esperar a tener los géneros ANTES de dibujar cualquier ficha o formulario
 // que los use (si no, generosDisponibles estaría vacío la primera vez).
 async function iniciar() {
   construirSidebar();
-  // abrirCategoria ya se encarga de pedir los géneros de esa categoría -
-  // antes esta línea llamaba cargarGeneros() ella misma, pero en ese
-  // momento categoriaActual todavía era null (se define recién adentro de
-  // abrirCategoria), así que hubiera pedido "/generos/null".
-  await abrirCategoria(categorias[0].id);  // la página carga directo en la primera categoría
+  // La página arranca con el archivador cerrado: no se abre ninguna
+  // categoría hasta que se haga clic en una carpeta (abrirCategoria ya se
+  // encarga de pedir los géneros de esa categoría en ese momento).
 }
 iniciar();
