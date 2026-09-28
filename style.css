@@ -1,0 +1,516 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap');
+
+/* ---------- PALETA DE COLORES ----------
+   Todos los colores de la página salen de acá (nada de colores sueltos
+   repetidos por el archivo): si algún día quiero cambiar el verde de fondo
+   o el crema de la ventana, esta es la única línea que toco. */
+:root {
+  --verde: #5ec26a;              /* ya no se usa de fondo, queda por si lo necesito en otro lado */
+  --verde-pastel-claro: #e7f4e0;  /* fondo de la página: el tono claro del cuadriculado */
+  --verde-pastel-oscuro: #cbe8bd; /* fondo de la página: el tono oscuro del cuadriculado */
+  --crema: #f4efe2;               /* fondo de la ventana y de los botones */
+  --crema-clara: #fbf7ec;         /* fondo un poco más claro, para portadas y scrollbar */
+  --tinta: #141414;               /* el "negro" de todos los textos y bordes */
+  --gris-estrella: #cbc4b4;       /* estrella vacía */
+  --amarillo-estrella: #ffc93c;   /* estrella llena */
+  /* Flechita de mouse, negra, para toda la página (normal y clickeable). */
+  --cursor-flecha: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='24' viewBox='0 0 22 24'%3E%3Cpath d='M3 2 L3 19 L7.2 15.2 L10.3 21.8 L13.6 20.2 L10.5 13.8 L17 13.8 Z' fill='%23141414' stroke='%23141414' stroke-width='1.8' stroke-linejoin='round'/%3E%3C/svg%3E") 3 2;
+}
+
+/* ---------- CURSOR Y RESETS BASE ----------
+   Uso mi propia flechita (--cursor-flecha) en vez de la del sistema, tanto
+   en modo normal como sobre elementos clickeables. */
+html, body { cursor: var(--cursor-flecha), auto; }
+button, .cat-item, .card, .etiqueta-genero, summary {
+  cursor: var(--cursor-flecha), pointer;
+}
+
+/* Con esto, el padding y el borde de un elemento se descuentan de su ancho
+   declarado en vez de sumarse - así los cálculos de layout no me sorprenden. */
+* { box-sizing: border-box; }
+
+/* El recuadro de foco solo debe verse en los campos donde se escribe. */
+button, .cat-item, .card, .etiqueta-genero, summary { outline: none; }
+/* Y el cursor de texto (I-beam) no debe aparecer en ningún lado de la
+   página excepto donde se puede escribir: en vez de ir tapando elemento
+   por elemento, se desactiva la selección de texto en todo y se vuelve a
+   activar solo en los campos de escritura. */
+body { user-select: none; }
+input, textarea { user-select: text; }
+/* Firefox deja un borde punteado dentro del botón después de hacer clic;
+   "outline: none" no lo saca porque es una propiedad aparte. */
+button::-moz-focus-inner {
+  border: 0;
+  padding: 0;
+}
+input:focus, textarea:focus, select:focus {
+  outline: 2px solid var(--tinta);
+  outline-offset: 1px;
+}
+
+/* ---------- BARRA DE SCROLL (misma estética: crema + borde negro grueso) ---------- */
+* {
+  scrollbar-width: auto;              /* Firefox */
+  scrollbar-color: var(--tinta) var(--crema-clara);
+}
+::-webkit-scrollbar { width: 14px; height: 14px; }
+::-webkit-scrollbar-track {
+  background: var(--crema-clara);
+  border-left: 2px solid var(--tinta);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--crema);
+  border: 2px solid var(--tinta);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover { background: #e6ddc4; }
+::-webkit-scrollbar-corner { background: var(--crema-clara); }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  /* Fondo "pixelado": un cuadriculado de dos verdes pastel, armado con 4
+     gradientes lineales apilados en diagonal (el truco clásico del
+     "tablero de ajedrez" en CSS puro, sin ninguna imagen de por medio).
+     background-size chico (24px) es lo que hace que se vea como "píxeles"
+     grandes en vez de un patrón fino - si lo quieres más grueso o más fino,
+     ese es el número a tocar. */
+  background-color: var(--verde-pastel-claro);
+  background-image:
+    linear-gradient(45deg, var(--verde-pastel-oscuro) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--verde-pastel-oscuro) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--verde-pastel-oscuro) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--verde-pastel-oscuro) 75%);
+  background-size: 24px 24px;
+  background-position: 0 0, 0 12px, 12px -12px, -12px 0px;
+  font-family: 'Space Grotesk', system-ui, sans-serif;
+  color: var(--tinta);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 28px;
+}
+
+/* ---------- VENTANA (ocupa la pantalla, siempre visible) ---------- */
+.ventana {
+  width: 100%;
+  max-width: 1400px;
+  height: 86vh;
+  background: var(--crema);
+  border: 3px solid var(--tinta);
+  border-radius: 14px;
+  box-shadow: 10px 10px 0 var(--tinta);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.barra-titulo {
+  display: flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 3px solid var(--tinta);
+  flex: none;
+}
+.botones { display: flex; gap: 7px; width: 90px; }
+.espacio { width: 90px; }
+.punto {
+  width: 12px; height: 12px;
+  border: 2px solid var(--tinta);
+  border-radius: 50%;
+  display: inline-block;
+}
+.punto.llena { background: var(--tinta); }
+.titulo {
+  flex: 1; text-align: center;
+  font-weight: 700; font-size: 15px; letter-spacing: 1px;
+}
+
+/* ---------- CUERPO: sidebar + contenido ---------- */
+.cuerpo {
+  flex: 1;
+  display: flex;
+  min-height: 0;               /* permite que el contenido scrollee adentro */
+}
+
+.sidebar {
+  width: 210px;
+  flex: none;
+  padding: 18px 14px;
+  border-right: 3px solid var(--tinta);
+  overflow-y: auto;
+}
+.sidebar-titulo {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding-bottom: 8px;
+  border-bottom: 3px solid var(--tinta);
+}
+.lista-categorias { list-style: none; margin: 12px 0 0; padding: 0; }
+.cat-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 4px;
+  cursor: var(--cursor-flecha), pointer;
+  border-radius: 5px;
+  font-size: 15px;
+}
+.cat-item:hover { background: rgba(20,20,20,0.06); }
+.cat-item.activa { font-weight: 700; }
+.cat-icono {
+  width: 18px; height: 18px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cat-icono svg { display: block; }
+
+.contenido {
+  flex: 1;
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+.contenido-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 3px solid var(--tinta);
+}
+.contenido-header h2 { margin: 0; font-size: 20px; }
+.contador { font-size: 14px; font-weight: 500; }
+
+/* ---------- GALERÍA Y TARJETAS (portadas apaisadas) ---------- */
+.grid-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));  /* tarjetas más anchas, más "portada" */
+  gap: 16px;
+  margin-top: 14px;
+}
+.card {
+  border: 3px solid var(--tinta);
+  border-radius: 8px;
+  background: var(--crema-clara);
+  cursor: var(--cursor-flecha), pointer;
+  overflow: hidden;
+  transition: transform 0.08s;
+}
+.card:hover { transform: translate(-2px, -2px); }
+.card.arrastrando { opacity: 0.4; }
+.card.sobre-destino { outline: 3px dashed var(--tinta); outline-offset: 3px; }
+.portada {
+  position: relative;         /* para ubicar el iconito "mover" encima */
+  aspect-ratio: 3 / 2;        /* portada apaisada, un poco más alta que 16:9 */
+  border-bottom: 3px solid var(--tinta);
+  background-color: var(--crema);
+  background-image: radial-gradient(var(--tinta) 1.1px, transparent 1.3px);
+  background-size: 5px 5px;
+  /* touch-action: none evita que, en el celular, arrastrar la foto (con el
+     modo "mover" prendido) también intente hacer scroll de la página. */
+  touch-action: none;
+}
+/* Iconito para reposicionar la foto: aparece solo al pasar el mouse por la
+   portada (en pantallas táctiles, sin hover, queda visible siempre). */
+.portada-mover {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(244, 239, 226, 0.9);   /* var(--crema) con transparencia */
+  border: 2px solid var(--tinta);
+  border-radius: 6px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  /* evita que arrastrar el iconito también scrollee la página en celular */
+  touch-action: none;
+}
+/* Estas mismas reglas valen para .ficha-portada (el banner grande de la
+   ficha): usa el mismo botón/modo "mover" que las portadas de la grilla. */
+.portada:hover .portada-mover,
+.ficha-portada:hover .portada-mover { opacity: 1; }
+@media (hover: none) {
+  .portada-mover { opacity: 1; }   /* sin mouse no hay "hover": lo dejo siempre visible */
+}
+/* Modo mover activo (se prende/apaga clickeando el iconito): la portada se
+   puede arrastrar, marcada con un borde punteado, y el iconito queda con
+   los colores invertidos (como "apretado") para que se note que sigue prendido. */
+.portada.modo-mover,
+.ficha-portada.modo-mover {
+  outline: 3px dashed var(--tinta);
+  outline-offset: -3px;
+}
+.portada.modo-mover .portada-mover,
+.ficha-portada.modo-mover .portada-mover {
+  opacity: 1;
+  background: var(--tinta);
+  color: var(--crema);   /* el svg usa stroke="currentColor" */
+}
+.card-info { padding: 9px; }
+.card-titulo { font-weight: 700; font-size: 15px; margin: 0 0 4px; }
+.card-autor { font-size: 12px; font-weight: 500; margin: 0 0 4px; opacity: 0.7; }
+.card-sinopsis {
+  font-size: 12px;
+  line-height: 1.4;
+  margin: 0 0 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.card .estrellas { font-size: 16px; }
+.card-fecha-vista { font-size: 11.5px; margin: 5px 0 0; opacity: 0.65; }
+.vacio { font-size: 15px; margin-top: 14px; }
+#btn-agregar { display: block; margin: 14px 0 18px; }
+
+/* ---------- ESTRELLAS (con mitades) ---------- */
+.estrellas-cont { display: inline-flex; }
+.estrella {
+  position: relative;
+  display: inline-block;
+  width: 1em; height: 1em;
+  line-height: 1;
+}
+.e-fondo, .e-frente {
+  position: absolute; top: 0; left: 0;
+  width: 1em; height: 1em;
+}
+.e-fondo svg, .e-frente svg {
+  display: block;
+  width: 1em; height: 1em;
+}
+.e-fondo { color: var(--gris-estrella); }   /* estrella "vacía" */
+.e-frente {                                  /* estrella llena, recortada por su ancho */
+  overflow: hidden;
+  color: var(--amarillo-estrella);
+}
+.editable .estrella { cursor: var(--cursor-flecha), pointer; }
+.zona {                                      /* zonas invisibles para clickear media/entera */
+  position: absolute; top: 0; height: 100%; width: 50%;
+}
+.zona.izq { left: 0; }
+.zona.der { left: 50%; }
+
+/* ---------- FICHA (detalle) ---------- */
+.ficha-acciones { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
+.btn-eliminar {
+  margin-left: auto;          /* separado a la derecha del resto */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  color: #a32d2d;
+  border-color: #a32d2d;
+  box-shadow: 3px 3px 0 #a32d2d;
+}
+/* Portada de la ficha: banner ANCHO arriba de todo (antes era un recuadro
+   chico de 140x200 al lado del texto). aspect-ratio 3/1 = tres veces más
+   ancha que alta - si la quieres más o menos "achatada", ese es el número
+   a tocar (2/1 = más alta, 4/1 = más achatada todavía). */
+.ficha-portada {
+  position: relative;   /* para poder ubicar el iconito "mover" encima */
+  width: 100%;
+  aspect-ratio: 3 / 1;
+  margin-top: 12px;
+  border: 3px solid var(--tinta); border-radius: 6px;
+  background-color: var(--crema);
+  background-image: radial-gradient(var(--tinta) 1.1px, transparent 1.3px);
+  background-size: 5px 5px;
+  /* touch-action: none evita que, en el celular, arrastrar la foto (con el
+     modo "mover" prendido) también intente hacer scroll de la página. */
+  touch-action: none;
+}
+.ficha-datos { margin-top: 14px; }
+.ficha-titulo { margin: 0; font-size: 20px; }
+.ficha-sub { margin: 0 0 8px; font-size: 13px; }
+.rating-edit { font-size: 28px; margin-bottom: 10px; }
+.dato { margin: 3px 0; font-size: 14px; }
+.dato b { font-weight: 700; }
+.ficha-label { font-weight: 700; font-size: 13px; margin: 14px 0 3px; }
+.ficha-texto { margin: 0; font-size: 14px; line-height: 1.45; }
+
+/* El comentario va dentro de un <details>: cerrado por defecto, con flechita. */
+.ficha-comentario-desplegable { margin-top: 14px; }
+.ficha-comentario-desplegable summary {
+  cursor: var(--cursor-flecha), pointer;
+  font-weight: 700;
+  font-size: 13px;
+  list-style: none;
+}
+.ficha-comentario-desplegable summary::-webkit-details-marker { display: none; }
+.ficha-comentario-desplegable summary::before { content: "▸ "; }
+.ficha-comentario-desplegable[open] summary::before { content: "▾ "; }
+.ficha-comentario {
+  margin-top: 6px;
+  padding: 10px 0; font-size: 14px; line-height: 1.45;
+}
+
+/* ---------- BOTONES Y FORMULARIO ---------- */
+.btn-retro {
+  font-family: inherit; font-weight: 700; font-size: 14px;
+  color: var(--tinta); background: var(--crema);
+  border: 3px solid var(--tinta); border-radius: 6px;
+  padding: 6px 12px; cursor: var(--cursor-flecha), pointer;
+  box-shadow: 3px 3px 0 var(--tinta);
+  display: inline-block;   /* para que funcione igual en <button> y <label> */
+}
+.btn-retro:hover { filter: brightness(0.93); }
+.btn-retro:active { box-shadow: none; transform: translate(3px, 3px); }
+
+/* ---------- FORMULARIO: lista de propiedades (ícono + etiqueta + valor) ---------- */
+.formulario { display: flex; flex-direction: column; margin-top: 14px; }
+.propiedad {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 5px 2px;
+  border-bottom: 1px solid rgba(20, 20, 20, 0.08);
+}
+.propiedad-icono {
+  flex: none;
+  width: 18px; height: 18px;
+  margin-top: 5px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0.65;
+}
+.propiedad-label {
+  flex: 0 0 150px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--tinta);
+  margin-top: 7px;
+}
+.propiedad-valor { flex: 1; min-width: 0; }
+
+/* El input/textarea no tiene borde ni fondo propio: solo se nota al pasar
+   el mouse o al escribir, como en una lista de propiedades. */
+.formulario input[type="text"],
+.formulario textarea,
+.formulario select {
+  display: block;
+  width: 100%;
+  font-family: inherit; font-size: 14px; color: var(--tinta);
+  border: none; background: transparent;
+  padding: 5px 6px; border-radius: 4px;
+  resize: vertical;
+  cursor: var(--cursor-flecha), pointer;   /* el <select> no hereda el cursor de línea 21-24 */
+}
+.formulario input[type="text"]:hover,
+.formulario textarea:hover,
+.formulario select:hover {
+  background: rgba(20, 20, 20, 0.06);
+}
+.formulario input[type="text"]:focus,
+.formulario textarea:focus,
+.formulario select:focus {
+  background: rgba(20, 20, 20, 0.06);
+  outline-offset: -2px;   /* sin borde propio: el foco queda hacia adentro */
+}
+/* El <input type="file"> real queda oculto (pero accesible); el "botón"
+   visible es un <label for="f-archivo"> con estilo .btn-retro, y el nombre
+   del archivo lo mostramos nosotros en #f-archivo-nombre (así no aparece
+   el texto nativo del navegador tipo "Sin archivos seleccionados"). */
+.input-archivo-oculto {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.nombre-archivo {
+  margin-left: 10px;
+  font-size: 13px;
+  color: var(--tinta);
+  opacity: 0.75;
+}
+/* Separación entre el botón "Elegir imagen" (+ el preview, si hay imagen
+   subida) y el input de abajo donde se pega un link - sin esto quedaban
+   pegados, porque #f-preview no ocupa ningún alto cuando está vacío
+   (todavía sin imagen elegida). */
+#f-portada {
+  margin-top: 8px;
+}
+
+/* Miniatura de previsualización en el formulario, con el mismo punteado
+   semitransparente que las tarjetas y la ficha. Como una <img> no puede
+   mostrar un fondo CSS por debajo de sí misma, el punteado va en un ::after
+   aparte, posicionado justo encima gracias a "position: relative" acá y
+   "position: absolute" en el ::after. */
+.preview-imagen {
+  position: relative;
+  display: inline-block;
+  margin-top: 6px;
+}
+.preview-imagen img {
+  display: block;
+  max-width: 100px;
+  border: 2px solid var(--tinta);
+  border-radius: 5px;
+}
+.preview-imagen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background-image: radial-gradient(rgba(20, 20, 20, 0.18) 1.1px, transparent 1.3px);
+  background-size: 5px 5px;
+  pointer-events: none;   /* que no bloquee ningún clic sobre la miniatura */
+}
+
+.form-acciones { display: flex; gap: 10px; margin-top: 14px; }
+
+/* ---------- MODAL DE CONFIRMACIÓN (mismo look que la ventana) ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(20, 20, 20, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 500;
+  padding: 20px;
+}
+.modal-caja {
+  background: var(--crema);
+  border: 3px solid var(--tinta);
+  border-radius: 12px;
+  box-shadow: 8px 8px 0 var(--tinta);
+  padding: 20px 22px;
+  max-width: 340px;
+  width: 100%;
+}
+.modal-mensaje { margin: 0 0 18px; font-size: 15px; line-height: 1.45; }
+.modal-acciones { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ---------- ETIQUETAS DE GÉNERO ---------- */
+.etiquetas-form { display: flex; flex-wrap: wrap; gap: 7px; }
+.etiqueta-genero {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 8px;         /* más cuadrada, pero no del todo */
+  border: 2px solid var(--tinta);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tinta);
+}
+.etiquetas-form .etiqueta-genero { cursor: var(--cursor-flecha), pointer; }
+.etiquetas-form .etiqueta-genero.inactiva { opacity: 0.45; }
+.etiqueta-quitar {
+  margin-left: 6px;
+  font-weight: 700;
+  opacity: 0.55;
+}
+.etiqueta-quitar:hover { opacity: 1; }
+.etiqueta-nueva { display: flex; gap: 8px; margin-top: 10px; }
+.etiqueta-nueva input { flex: 1; }

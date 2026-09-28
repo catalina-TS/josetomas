@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bitácora.exe</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Ventana fija: es la página completa, no se abre desde un escritorio.
+       Todo lo que ve la usuaria vive adentro de esta ventana. -->
+  <div class="ventana" id="ventana">
+    <!-- Barra de título falsa, estilo ventana de Windows/Mac viejo. Los
+         "puntos" son solo decorativos, no cierran/minimizan nada de verdad. -->
+    <div class="barra-titulo">
+      <div class="botones">
+        <span class="punto llena"></span>
+        <span class="punto"></span>
+        <span class="punto"></span>
+      </div>
+      <span class="titulo">BITÁCORA.EXE</span>
+      <span class="espacio"></span>
+    </div>
+    <div class="cuerpo">
+      <!-- Sidebar: acá script.js dibuja la lista "ARCHIVO" con las 6
+           categorías (construirSidebar() en script.js llena este <ul>). -->
+      <aside class="sidebar">
+        <p class="sidebar-titulo">ARCHIVO</p>
+        <ul class="lista-categorias" id="lista-categorias"></ul>
+      </aside>
+      <!-- Contenido: el nombre de la categoría abierta + el contador de
+           entradas se llenan en mostrarGaleria() (script.js). El <div id="galeria">
+           es el "lienzo" que se reescribe entero cada vez que cambio de vista
+           (galería, ficha o formulario) - todo pasa por su .innerHTML. -->
+      <div class="contenido">
+        <div class="contenido-header">
+          <h2 id="titulo-categoria"></h2>
+          <span class="contador" id="contador-entradas"></span>
+        </div>
+        <div class="galeria" id="galeria"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- script.js se conecta a mi backend (bit-cora-backend, en localhost:3000
+       mientras desarrollo) para guardar y leer las entradas - ya NO usa
+       localStorage. Necesita que "node index.js" esté corriendo para funcionar. -->
+  <script src="script.js"></script>
+</body>
+</html>
